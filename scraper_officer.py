@@ -11,25 +11,24 @@ import pandas as pd
 import time
 import helpers
 
-def get_filing_soup_from_url(url):
-    chrome_options_helper = Options()
-    chrome_options_helper.add_argument("--headless")  # Run Chrome in headless mode (without UI)
-    # wait_helper = WebDriverWait(driver, 10)  # Maximum wait time of 10 seconds
-    # filing_date_helper = wait_helper.until(EC.presence_of_element_located((By.CLASS_NAME, "filing_date")))
-    driver_helper = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
-    print("URL: " + url)
-    driver_helper.get(url)
-    wait_helper = WebDriverWait(driver_helper, 20)  # Maximum wait time of 10 seconds
-    filing_date = wait_helper.until(EC.presence_of_element_located((By.CLASS_NAME, "filing_date")))
-    print("HELPER: filing_date: " + filing_date.text)
+# def get_filing_soup_from_url(url):
+#     chrome_options_helper = Options()
+#     chrome_options_helper.add_argument("--headless")  # Run Chrome in headless mode (without UI)
+#     # wait_helper = WebDriverWait(driver, 10)  # Maximum wait time of 10 seconds
+#     # filing_date_helper = wait_helper.until(EC.presence_of_element_located((By.CLASS_NAME, "filing_date")))
+#     driver_helper = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+#     print("URL: " + url)
+#     driver_helper.get(url)
+#     wait_helper = WebDriverWait(driver_helper, 20)  # Maximum wait time of 10 seconds
+#     filing_date = wait_helper.until(EC.presence_of_element_located((By.CLASS_NAME, "filing_date")))
+#     print("HELPER: filing_date: " + filing_date.text)
 
-    soup_helper = BeautifulSoup(driver_helper.page_source, features="lxml")
-    # print(soup)
-    return soup_helper
+#     soup_helper = BeautifulSoup(driver_helper.page_source, features="lxml")
+#     # print(soup)
+#     return soup_helper
 
 
-TEST_OFFICER_1 = "file:///Users/seanchuang/Desktop/take-home-tasks/TRACT/officer1.html"
-
+# TEST_OFFICER_1 = "file:///Users/seanchuang/Desktop/take-home-tasks/TRACT/officer1.html"
 
 
 
@@ -55,23 +54,57 @@ data = {}
 
 # Set up Chrome driver options
 chrome_options = Options()
-chrome_options.add_argument("--headless")  # Run Chrome in headless mode (without UI)
+# chrome_options.add_argument("--headless")  # Run Chrome in headless mode (without UI)
 
 # Initialize Chrome driver
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
 
 # Read https://opencorporates.com/companies/us_de/5273346
-driver.get(TEST_OFFICER_1)
+driver.get("https://opencorporates.com")
+
+accept_cookies_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "cky-btn-accept")))
+accept_cookies_button.click()
+
+# Select officer search mode
+officer_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "officerRadio")))
+officer_button.click()
+
+# driver.find_element(By.NAME, “).send_keys(“query” + Keys.ENTER)
+search_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "oc-home-search_button")))
+
+# Find the search bar and get rid of the default search value
+search_bar = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "oc-home-search_input")))
+# search_bar.clear()
+# Prompt the user for input 
+
+user_input = input("Please enter the name of the officer of which you'd like to scrape data: ")
+# Fill out the search bar with user input 
+search_bar.send_keys(user_input)
+
+# Click the search button 
+search_button.click()
+
+url_search_result = driver.current_url
+
+driver.get(url_search_result)
 
 # Wait until the desired elements are present or visible on the page
-wait = WebDriverWait(driver, 10)  # Maximum wait time of 10 seconds
-company_number = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "address")))
+wait = WebDriverWait(driver, 20)  # Maximum wait time of 10 seconds
+search_results_page_obj = wait.until(EC.presence_of_element_located((By.ID, "results")))
 
 # Create a BeautifulSoup object
 soup = BeautifulSoup(driver.page_source, features="lxml")
 
-# Print the text of the element
-# print(company_number.text)
+first_li = soup.find('ul', {'class': 'officers unstyled'}).find('li')
+print(first_li)
+# Get the URL of the person
+url = first_li.find('a').get('href')
+print(url)
+
+driver.get("https://opencorporates.com" + url)
+
+print("reached here1")
+soup = BeautifulSoup(driver.page_source, features="lxml")
 
 officer_name_obj = soup.find('h1')
 officer_name_string = officer_name_obj.text.strip()
@@ -86,7 +119,7 @@ print("company_name: " + company_name_string)
 print("company_url: " + company_url_string)
 
 data["Company Name"] = company_name_string
-data["Company Link"] = company_url_string
+data["Company Link"] = "https://opencorporates.com" + company_url_string
 
 name_obj = soup.find('dd', class_='name')
 name_string = name_obj.find('a').text.strip()
@@ -95,15 +128,19 @@ print("name: " + name_string)
 data["Name"] = name_string
 
 ### LOG-IN REQUIRED TO ACCESS ADDRESS DATA ###
-data["Address"] = "LOG-IN REQUIRED FOR ADDRESS"
+data["Address"] = "N/A"
 
 position_obj = soup.find('dd', class_='position')
 position_string = position_obj.text.strip()
 
 data["Position"] = position_string
 
+start_date_string = "DEFAULT_VALUE"
 start_date_obj = soup.find('dd', class_='start_date')
-start_date_string = start_date_obj.text.strip()
+if start_date_obj is None:
+    start_date_string = "N/A"
+else:
+    start_date_string = start_date_obj.text.strip()
 
 data["Start Date"] = start_date_string
 
@@ -148,7 +185,7 @@ df = df.append(data, ignore_index=True)
 
 # print(df)
 
-df.to_csv('officer_output.csv', index=False)
+df.to_csv('output.csv', index=False)
 
 # Quit the driver
 driver.quit()

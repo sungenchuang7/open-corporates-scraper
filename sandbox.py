@@ -35,24 +35,7 @@ OC_HOMEPAGE = "file:///Users/seanchuang/Desktop/take-home-tasks/TRACT/oc_homepag
 
 
 
-header = [
-    'Company Name',
-    'Company Number',
-    'Status',
-    'Incorporation Date',
-    'Dissolution Date',
-    'Company Type',
-    'Jurisdiction',
-    'Business Number',
-    'Registry Page',
-    'Recent Filings',
-    'Source'
-    'Latest Events'
-]
 
-df = pd.DataFrame(columns = header)
-
-data = {}
 
 # input1 = input("Do you want to scrape data about a company or about an officer? \nEnter 1 for company and 2 for officer.")
 
@@ -66,27 +49,27 @@ chrome_options.add_argument("--headless")  # Run Chrome in headless mode (withou
 # Initialize Chrome driver
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
 
-
 # Read https://opencorporates.com/companies/us_de/5273346
 driver.get("https://opencorporates.com/")
 
-cookies_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "cky-btn-accept")))
-cookies_button.click()
+accept_cookies_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "cky-btn-accept")))
+accept_cookies_button.click()
 
 # driver.find_element(By.NAME, “).send_keys(“query” + Keys.ENTER)
-button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "oc-home-search_button")))
+search_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "oc-home-search_button")))
 
 # Find the search bar and get rid of the default search value
 search_bar = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "oc-home-search_input")))
 # search_bar.clear()
 # Prompt the user for input 
+
 user_input = input("Please enter the name of the company of which you'd like to scrape data: ")
 # Fill out the search bar with user input 
 search_bar.send_keys(user_input)
 # search_bar.submit()
 
 # Click the search button 
-button.click()
+search_button.click()
 
 url_company_search_result = driver.current_url
 
@@ -188,10 +171,24 @@ print("registry_page: " + registry_page_string)
 
 print("--------------------FILINGS INFORMATION-------------------------")
 
+
+#################### For Storing Data as DataFrame in a Cell #####################
+# filing_header = [
+#     "Filing Name",
+#     "Filing URL",
+#     "Filing Date",
+#     "Filing Number"
+#     "Filing Type",
+#     "Filing Code"
+# ]
+# filing_df = pd.DataFrame(columns = filing_header)
+###################################################################################
+
+
 list_of_filings = []
 filings = soup.find_all("a", class_="filing")
 for filing in filings:
-    filing_list = []
+
     filing_name_string = filing.text
     filing_url_string = filing.get("href")
     print("filing_name: " + filing_name_string)
@@ -213,13 +210,25 @@ for filing in filings:
     filing_code_string = filing_code.text.strip()
     print("filing_code_string: " + filing_code_string)
 
+    #################### For Storing Data as DataFrame in a Cell #####################
+    # filing_dict = {}
+    # filing_dict["Filing Name"] = filing_name_string
+    # filing_dict["Filing URL"] = filing_url_string
+    # filing_dict["Filing Date"] = filing_date_string
+    # filing_dict["Filing Type"] = filing_type_string
+    # filing_dict["Filing Code"] = filing_code_string
+    # filing_df = filing_df.append(filing_dict, ignore_index=True)
+    ############################################################
+
     
+    ################### Storing Data As List of Tuples #############################
     name_tuple = ("Filing Name", filing_name_string)
     url_tuple = ("Filing URL", filing_url_string)
     date_tuple = ("Filing Date", filing_date_string)
     type_tuple = ("Filing Type", filing_type_string)
     code_tuple = ("Filing Code", filing_code_string)
 
+    filing_list = []
     filing_list.append(name_tuple)
     filing_list.append(url_tuple)
     filing_list.append(date_tuple)
@@ -227,6 +236,7 @@ for filing in filings:
     filing_list.append(code_tuple)
 
     list_of_filings.append(filing_list)
+    ################################################
 
 print("--------------------------------------------------------------")
 
@@ -240,28 +250,58 @@ list_of_events = []
 
 events = soup.find_all("div", class_="event-timeline-row")
 
+event_df_header = [
+    "Event Date",
+    "Event Description"
+] 
+
+event_df = pd.DataFrame(columns = event_df_header)
+
+
 for event in events:
-    event_list = []
+    event_dict = {}
+    # event_list = []
     # Find the <dt> element within the event
     date_element = event.find("dt")
     # Extract the date from the enclosed text
     date_string = date_element.text.strip()
     print("event date: " + date_string)
+    
     # Find the <dd> element within the event
     description_element = event.find("dd") 
     # Extract the text from the <a> element within the <dd> element
     description_string = description_element.find("a").text.strip()
     print("event description: " + description_string)
 
-    date_tuple = ("Event Date", date_string)
-    description_tuple = ("Event Description", description_string)
+    event_dict["Event Date"] = date_string
+    event_dict["Event Description"] = description_string
+    event_df = event_df.append(event_dict, ignore_index=True)
 
-    event_list.append(date_tuple)
-    event_list.append(description_tuple)
+    # date_tuple = ("Event Date", date_string)
+    # description_tuple = ("Event Description", description_string)
 
-    list_of_events.append(event_list)
+    # event_list.append(date_tuple)
+    # event_list.append(description_tuple)
+
+    # list_of_events.append(event_list)
 
 
+header = [
+    'Company Name',
+    'Company Number',
+    'Status',
+    'Incorporation Date',
+    'Dissolution Date',
+    'Company Type',
+    'Jurisdiction',
+    'Business Number',
+    'Registry Page',
+    'Recent Filings',
+    'Source'
+    'Latest Events'
+]
+df = pd.DataFrame(columns = header)
+data = {}
 data['Company Name'] = company_name_string
 data['Company Number'] = company_number_string
 data['Status'] = status_string
@@ -272,9 +312,9 @@ data['Jurisdiction'] = jurisdiction_string
 data['Business Number'] = business_number_string
 data['Registry Page'] = registry_page_string
 data['Recent Filings'] = list_of_filings
+# data['Recent Filings'] = filing_df
 data['Source'] = source_string
-data['Latest Events'] = list_of_events
-
+data['Latest Events'] = event_df
 
 df = df.append(data, ignore_index=True)
 
