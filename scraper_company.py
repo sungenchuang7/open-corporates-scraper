@@ -6,18 +6,19 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-import re
 import pandas as pd
-import time
-import helpers
 from selenium.webdriver.common.keys import Keys
+import sys
 
+
+#################### HELPER FUNCTIONS ###################
+# Given a url, this function returns a soup for filing data 
 def get_filing_soup_from_url(url):
     chrome_options_helper = Options()
     chrome_options_helper.add_argument("--headless")  # Run Chrome in headless mode (without UI)
     # wait_helper = WebDriverWait(driver, 10)  # Maximum wait time of 10 seconds
     # filing_date_helper = wait_helper.until(EC.presence_of_element_located((By.CLASS_NAME, "filing_date")))
-    driver_helper = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
+    driver_helper = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options_helper)
     print("URL: " + url)
     driver_helper.get(url)
     wait_helper = WebDriverWait(driver_helper, 20)  # Maximum wait time of 10 seconds
@@ -27,21 +28,9 @@ def get_filing_soup_from_url(url):
     soup_helper = BeautifulSoup(driver_helper.page_source, features="lxml")
     # print(soup)
     return soup_helper
+########################################################
 
-
-TEST_PAGE_1 = "file:///Users/seanchuang/Desktop/take-home-tasks/TRACT/page1.html"
-TEST_PAGE_1_FILING1 = "file:///Users/seanchuang/Desktop/take-home-tasks/TRACT/page1_filing1.html"
-OC_HOMEPAGE = "file:///Users/seanchuang/Desktop/take-home-tasks/TRACT/oc_homepage.html"
-
-
-
-
-
-# input1 = input("Do you want to scrape data about a company or about an officer? \nEnter 1 for company and 2 for officer.")
-
-
-
-
+#################### MAIN SCRIPT #######################
 # Set up Chrome driver options
 chrome_options = Options()
 # chrome_options.add_argument("--headless")  # Run Chrome in headless mode (without UI)
@@ -49,42 +38,47 @@ chrome_options = Options()
 # Initialize Chrome driver
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
 
-
-# Read https://opencorporates.com/companies/us_de/5273346
+# Read https://opencorporates.com/
 driver.get("https://opencorporates.com/")
 
+# First find accept cookies button and click it
 accept_cookies_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.ID, "cky-btn-accept")))
 accept_cookies_button.click()
 
-# driver.find_element(By.NAME, “).send_keys(“query” + Keys.ENTER)
+# Find the search button
 search_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "oc-home-search_button")))
 
-# Find the search bar and get rid of the default search value
+# Find the search bar
 search_bar = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "oc-home-search_input")))
-# search_bar.clear()
-# Prompt the user for input 
 
+# Prompt the user for input 
 user_input = input("Please enter the name of the company of which you'd like to scrape data: ")
+
 # Fill out the search bar with user input 
 search_bar.send_keys(user_input)
-# search_bar.submit()
 
 # Click the search button 
 search_button.click()
 
+# Read the search result page
 url_company_search_result = driver.current_url
-
 driver.get(url_company_search_result)
 
-
+# Wait for API to send response
 wait = WebDriverWait(driver, 20)  # Maximum wait time of 10 seconds
-temp = wait.until(EC.presence_of_element_located((By.ID, "companies")))
+temp = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "oc-header-search__field")))
 
+# Update soup
 soup = BeautifulSoup(driver.page_source, features="lxml")
 
-# companies_ul = soup.find("ul", id="companies")
+# Check how many companies match the search query
+number_of_companies_found = soup.find('div', {'class': 'span7'}).find('h2').get_text()
+print(number_of_companies_found)
 
-# companies = companies_ul.find_all('li')
+# If none, end the program
+if number_of_companies_found == '\nFound 0 companies\n':
+    print("Sorry. There's no matching result for the company you searched for.")
+    sys.exit()
 
 # Find the first <li> tag under the <ul> tag
 first_li = soup.find('ul', {'id': 'companies'}).find('li')
@@ -93,27 +87,16 @@ first_li = soup.find('ul', {'id': 'companies'}).find('li')
 url = first_li.find('a', {'class': 'company_search_result'}).get('href')
 print(url)
 
+# Read the company's page 
 driver.get("https://opencorporates.com" + url)
 
-print("reached here1")
 
-# target_company.find('a', class_='s')
-
+# Update soup
 soup = BeautifulSoup(driver.page_source, features="lxml")
-
-print("------------------------------------------------------------------------------------------------------------------------")
-print("------------------------------------------------------------------------------------------------------------------------")
-# time.sleep(10)
-with open("output.html", "w") as file:
-    file.write(str(soup))
-print("------------------------------------------------------------------------------------------------------------------------")
-print("------------------------------------------------------------------------------------------------------------------------")
 
 # Wait until the desired elements are present or visible on the page
 wait = WebDriverWait(driver, 20)  # Maximum wait time of 10 seconds
 company_number = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "company_number")))
-
-print("reached here2")
 
 # Create a BeautifulSoup object
 soup = BeautifulSoup(driver.page_source, features="lxml")
@@ -121,54 +104,94 @@ soup = BeautifulSoup(driver.page_source, features="lxml")
 # Print the text of the element
 # print(company_number.text)
 
+# Company Name
 company_name_obj = soup.find("h1", class_="wrapping_heading")
-company_name_string = company_name_obj.text.strip()
+company_name_string = "DEFAULT_VALUE"
+if company_name_obj is None:
+    company_name_string = "N/A"   
+else:
+    company_name_string = company_name_obj.text.strip()
 print("company_name: " + company_name_string)
 
 
+# Company Number
 company_number_obj = soup.find("dd", class_="company_number")
-company_number_string = company_number_obj.text
+company_number_string = "DEFAULT_VALUE"
+if company_number_obj is None:
+    company_number_string = "N/A" 
+else:
+    company_number_string = company_number_obj.text
 print("company_number: " + company_number_string)
 
+
+# Status
 status_obj = soup.find("dd", class_="status")
-status_string = status_obj.text.strip()
+status_string = "DEFAULT_VALUE"
+if status_obj is None:
+    status_string = "N/A"
+else:
+    status_string = status_obj.text.strip()
 print("status: " + status_string)
 
-# Same for incorporation_date
+
+# Incorporation Date
 incorporation_date_obj = soup.find("dd", class_="incorporation_date")
-incorporation_date_string = incorporation_date_obj.text
-print("incorporation_date: " + incorporation_date_string)
-# print(type(incorporation_date_string))
-
-dissolution_date_obj = soup.find("dd", class_="dissolution date")
-dissolution_date_string = "default_string"
-if dissolution_date_obj is not None: 
-    dissolution_date_string = dissolution_date_obj.text
-    print("dissolution_date: " + dissolution_date_string)
+incorporation_date_string = "DEFAULT_VALUE"
+if incorporation_date_obj is None:
+    incorporation_date_string = "N/A"
 else:
-    dissolution_date_string = "None"
-    print("dissolution_date: " + dissolution_date_string)
+    incorporation_date_string = incorporation_date_obj.text
+print("incorporation_date: " + incorporation_date_string)
 
 
-# company_type
+# Dissolution Date
+dissolution_date_obj = soup.find("dd", class_="dissolution date")
+dissolution_date_string = "DEFAULT_VALUE"
+if dissolution_date_obj is None: 
+    dissolution_date_string = "N/A"
+else:
+    dissolution_date_string = dissolution_date_obj.text
+print("dissolution_date: " + dissolution_date_string)
+
+
+# Company Type
 company_type_obj = soup.find("dd", class_="company_type")
-company_type_string = company_type_obj.text.strip()
+company_type_string = "DEFAULT_VALUE"
+if company_type_obj is None:
+    company_type_string = "N/A"
+else:
+    company_type_string = company_type_obj.text.strip()
 print("company_type: " + company_type_string)
 
-# jurisdiction
+
+# Jurisdiction
 jurisdiction_obj = soup.find("dd", class_="jurisdiction")
-jurisdiction_string = jurisdiction_obj.text.strip()
+jurisdiction_string = "DEFAULT_VALUE"
+if jurisdiction_obj is None:
+    jurisdiction_string = "N/A"
+else:
+    jurisdiction_string = jurisdiction_obj.text.strip()
 print("jurisdiction: " + jurisdiction_string)
 
-# business number
+
+# Business Number
 business_number_obj = soup.find("dd", class_="business_number")
-business_number_string = business_number_obj.text.strip()
+business_number_string = "DEFAULT_VALUE"
+if business_number_obj is None:
+    business_number_string = "N/A"
+else:
+    business_number_string = business_number_obj.text.strip()
 print("business_number: " + business_number_string)
 
-# registry page
+# Registry Page
 registry_page_obj = soup.find("dd", class_="registry_page")
-registry_page_string = registry_page_obj.text.strip()
+registry_page_string = "DEFAULT_VALUE"
+if registry_page_obj is None:
+    registry_page_string = "N/A"
+else:
+    registry_page_string = registry_page_obj.text.strip()
 print("registry_page: " + registry_page_string)
+
 
 print("--------------------FILINGS INFORMATION-------------------------")
 
@@ -222,7 +245,7 @@ for filing in filings:
     ############################################################
 
     
-    ################### Storing Data As List of Tuples #############################
+    ################### Storing Data As List of Tuples ###############################
     name_tuple = ("Filing Name", filing_name_string)
     url_tuple = ("Filing URL", filing_url_string)
     date_tuple = ("Filing Date", filing_date_string)
@@ -237,17 +260,27 @@ for filing in filings:
     filing_list.append(code_tuple)
 
     list_of_filings.append(filing_list)
-    ################################################
+    ###################################################################################
 
 print("--------------------------------------------------------------")
 
+
+# Source
 source_obj = soup.find("span", class_="publisher")
-source_string = source_obj.text.strip()
+source_string = "DEFAULT_VALUE"
+if source_obj is None:
+    source_string = "N/A"
+else:
+    source_string = source_obj.text.strip()
 print("source: " + source_string)
 
-list_of_events = []
 
+################################ Latest Events ################################
 
+# Option to store data in a list instead of a dataframe
+################################################################################
+# list_of_events = [] 
+################################################################################
 
 events = soup.find_all("div", class_="event-timeline-row")
 
@@ -257,7 +290,6 @@ event_df_header = [
 ] 
 
 event_df = pd.DataFrame(columns = event_df_header)
-
 
 for event in events:
     event_dict = {}
@@ -278,6 +310,9 @@ for event in events:
     event_dict["Event Description"] = description_string
     event_df = event_df.append(event_dict, ignore_index=True)
 
+    
+    # Option to store data in a list of tuples instead of a dataframe
+    ################################################################################
     # date_tuple = ("Event Date", date_string)
     # description_tuple = ("Event Description", description_string)
 
@@ -285,6 +320,7 @@ for event in events:
     # event_list.append(description_tuple)
 
     # list_of_events.append(event_list)
+    ################################################################################
 
 
 header = [
@@ -321,11 +357,7 @@ df = df.append(data, ignore_index=True)
 
 print(df)
 
-df.to_csv('output_sandbox.csv', index=False)
+df.to_csv('scraper_company_output.csv', index=False)
 
 # Quit the driver
 driver.quit()
-
-## Convert tag data type to string
-## Store the heading and the data (status, incorporation date, ...) into a dataframe
-## Write the dataframe into a csv file. 

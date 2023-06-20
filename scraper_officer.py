@@ -1,3 +1,4 @@
+import sys
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -9,28 +10,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 import re
 import pandas as pd
 import time
-import helpers
-
-# def get_filing_soup_from_url(url):
-#     chrome_options_helper = Options()
-#     chrome_options_helper.add_argument("--headless")  # Run Chrome in headless mode (without UI)
-#     # wait_helper = WebDriverWait(driver, 10)  # Maximum wait time of 10 seconds
-#     # filing_date_helper = wait_helper.until(EC.presence_of_element_located((By.CLASS_NAME, "filing_date")))
-#     driver_helper = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=chrome_options)
-#     print("URL: " + url)
-#     driver_helper.get(url)
-#     wait_helper = WebDriverWait(driver_helper, 20)  # Maximum wait time of 10 seconds
-#     filing_date = wait_helper.until(EC.presence_of_element_located((By.CLASS_NAME, "filing_date")))
-#     print("HELPER: filing_date: " + filing_date.text)
-
-#     soup_helper = BeautifulSoup(driver_helper.page_source, features="lxml")
-#     # print(soup)
-#     return soup_helper
-
-
-# TEST_OFFICER_1 = "file:///Users/seanchuang/Desktop/take-home-tasks/TRACT/officer1.html"
-
-
 
 header = [
     "Person's Name",
@@ -46,11 +25,6 @@ header = [
 df = pd.DataFrame(columns = header)
 
 data = {}
-
-# input1 = input("Do you want to scrape data about a company or about an officer? \nEnter 1 for company and 2 for officer.")
-
-
-
 
 # Set up Chrome driver options
 chrome_options = Options()
@@ -74,7 +48,7 @@ search_button = WebDriverWait(driver, 20).until(EC.presence_of_element_located((
 
 # Find the search bar and get rid of the default search value
 search_bar = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, "oc-home-search_input")))
-# search_bar.clear()
+search_bar.clear()
 # Prompt the user for input 
 
 user_input = input("Please enter the name of the officer of which you'd like to scrape data: ")
@@ -92,8 +66,18 @@ driver.get(url_search_result)
 wait = WebDriverWait(driver, 20)  # Maximum wait time of 10 seconds
 search_results_page_obj = wait.until(EC.presence_of_element_located((By.ID, "results")))
 
+
 # Create a BeautifulSoup object
 soup = BeautifulSoup(driver.page_source, features="lxml")
+
+# Check how many officers match the search
+number_of_officers_found = soup.find('div', {'class': 'span7'}).find('h2').get_text()
+print(number_of_officers_found)
+
+# If none, end the program
+if number_of_officers_found == '\nFound 0 officers\n':
+    print("Sorry. There's no matching result for the officer you searched for.")
+    sys.exit()
 
 first_li = soup.find('ul', {'class': 'officers unstyled'}).find('li')
 print(first_li)
@@ -185,7 +169,7 @@ df = df.append(data, ignore_index=True)
 
 # print(df)
 
-df.to_csv('output.csv', index=False)
+df.to_csv('scraper_officer_output.csv', index=False)
 
 # Quit the driver
 driver.quit()
