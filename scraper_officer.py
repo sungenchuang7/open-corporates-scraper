@@ -11,14 +11,15 @@ import re
 import pandas as pd
 import time
 
+################################ HELPER FUNCTIONS ############################
+# Helper function to print ......
 def print_loading(string):
     print(string, end='', flush=True)  # Print the initial string without a newline character
-
     for _ in range(5):  # Repeat 5 times for a total of 10 periods
         time.sleep(1)  # Delay for 1 second
         print('.', end='', flush=True)  # Print a period without a newline character
-
     print()
+################################ SCRIPT ############################
 
 header = [
     "Person's Name",
