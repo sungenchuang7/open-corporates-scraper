@@ -102,7 +102,7 @@ while True:
 
     # Check how many companies match the search query
     number_of_companies_found = soup.find('div', {'class': 'span7'}).find('h2').get_text()
-    print(number_of_companies_found)
+    # print(number_of_companies_found)
 
     # If none, end the program
     if number_of_companies_found == '\nFound 0 companies\n':
@@ -244,20 +244,40 @@ while True:
 
         filing_name_string = filing.text
         filing_url_string = filing.get("href")
-        print("filing_name: " + filing_name_string)
-        print("filing_url: " + filing_url_string)
+        # print("filing_name: " + filing_name_string)
+        # print("filing_url: " + filing_url_string)
         filing_soup = get_filing_soup_from_url("https://opencorporates.com" + filing_url_string) # debug
-        # print(filing_soup)
+        
+        if filing_soup is None: 
+            print("Sorry! This filing isn't available. Skipping to the next one.")
+            continue
+
         filing_date = filing_soup.find("dd", class_="filing_date")
+        filing_date_string = "DEFAULT_VALUE"
         if filing_date is None:
-            print("shit happened!")
-        filing_date_string = filing_date.text.strip()
+            filing_date_string = "N/A"
+        else:
+            filing_date_string = filing_date.text.strip()
         print("filing_date: " + filing_date_string)
+
+
         filing_number = filing_soup.find("dd", class_="filing_number truncate")
-        filing_number_string = filing_number.text.strip()
+        filing_number_string = "DEFAULT_VALUE"
+        if filing_number is None:
+            filing_number_string = "N/A"
+        else:
+            filing_number_string = filing_number.text.strip()
         print("filing_number: " + filing_number_string)
+
+
         filing_type = filing_soup.find("dd", class_="filing_type")
-        filing_type_string = filing_type.text.strip()
+        filing_type_string = "DEFAULT_VALUE"
+        if filing_type is None:
+            filing_type_string = "N/A"
+        else:
+            filing_type_string = filing_type.text.strip()
+        
+
         print("filing_type_string: " + filing_type_string)
         filing_code = filing_soup.find("dd", class_="filing_code")
         filing_code_string = filing_code.text.strip()
@@ -278,6 +298,7 @@ while True:
         name_tuple = ("Filing Name", filing_name_string)
         url_tuple = ("Filing URL", filing_url_string)
         date_tuple = ("Filing Date", filing_date_string)
+        number_tuple = ("Filing Number", filing_number_string)
         type_tuple = ("Filing Type", filing_type_string)
         code_tuple = ("Filing Code", filing_code_string)
 
@@ -285,13 +306,14 @@ while True:
         filing_list.append(name_tuple)
         filing_list.append(url_tuple)
         filing_list.append(date_tuple)
+        filing_list.append(number_tuple)
         filing_list.append(type_tuple)
         filing_list.append(code_tuple)
 
         list_of_filings.append(filing_list)
         ###################################################################################
 
-    print("--------------------------------------------------------------")
+    # print("--------------------------------------------------------------")
 
 
     # Source
@@ -327,13 +349,13 @@ while True:
         date_element = event.find("dt")
         # Extract the date from the enclosed text
         date_string = date_element.text.strip()
-        print("event date: " + date_string)
+        # print("event date: " + date_string)
         
         # Find the <dd> element within the event
         description_element = event.find("dd") 
         # Extract the text from the <a> element within the <dd> element
         description_string = description_element.find("a").text.strip()
-        print("event description: " + description_string)
+        # print("event description: " + description_string)
 
         event_dict["Event Date"] = date_string
         event_dict["Event Description"] = description_string
@@ -370,7 +392,7 @@ while True:
 
     df = df.append(data, ignore_index=True)
 
-    print(df)
+    # print(df)
 
 
 print_loading("Saving scraped data in a CSV file")

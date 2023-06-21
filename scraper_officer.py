@@ -94,7 +94,7 @@ while True:
         continue
 
     first_li = soup.find('ul', {'class': 'officers unstyled'}).find('li')
-    print(first_li)
+    # print(first_li)
     # Get the URL of the person
     url = first_li.find('a').get('href')
     print(url)
